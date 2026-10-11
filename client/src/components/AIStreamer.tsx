@@ -1,18 +1,26 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 
+interface TokenUsage {
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+}
+
 export default function AIStreamer() {
-    const [prompt, setPrompt] = useState("Write a 3-bullet technical specification for a Redis cache layer.");
+    const [prompt, setPrompt] = useState("What is Next.js?");
     const [output, setOutput] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
     const [isDone, setIsDone] = useState(false);
     const [approvalStatus, setApprovalStatus] = useState("");
+    const [usage, setUsage] = useState<TokenUsage | null>(null);
 
     const handleGenerate = async () => {
         setIsGenerating(true);
         setIsDone(false);
         setOutput("");
         setApprovalStatus("");
+        setUsage(null);
 
         try {
             const response = await fetch("http://localhost:8000/api/generate", {
@@ -38,6 +46,8 @@ export default function AIStreamer() {
                         const data = JSON.parse(line.replace("data: ", ""));
                         if (data.type === "text") {
                             setOutput(prev => prev + data.content);
+                        } else if (data.type === "usage") {
+                            setUsage(data.content);
                         }
                     }
                 }
@@ -91,16 +101,21 @@ export default function AIStreamer() {
             <div className="whitespace-pre-wrap bg-gray-100 text-gray-800 p-4 rounded min-h-[200px] border border-gray-300 shadow-inner">
                 <ReactMarkdown>{output || "AI response will stream here..."}</ReactMarkdown>
             </div>
+            {usage && (
+                <div className="mt-3 flex gap-4 font-mono text-gray-400">
+                    <span>Input: {usage.inputTokens}</span>
+                    <span>Output: {usage.outputTokens}</span>
+                    <span className="font-semibold text-gray-500">Total: {usage.totalTokens}</span>
+                </div>
+            )}
 
-            {/* Approval Section */}
             {isDone && output && (
                 <div className="mt-4 p-4 bg-green-50 rounded border border-green-200">
-                    <p className="mb-2 text-sm text-green-800">Review the generated document. If it looks good, approve it to send to the engineering queue.</p>
                     <button
                         onClick={handleApprove}
                         className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-bold"
                     >
-                        Approve & Queue Ticket
+                        Save to DynamoDB & Queue response to SQS
                     </button>
                     {approvalStatus && <p className="mt-2 text-sm font-semibold text-blue-700">{approvalStatus}</p>}
                 </div>

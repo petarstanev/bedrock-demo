@@ -20,7 +20,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# AWS Clients
 bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
 dynamodb = boto3.resource('dynamodb', region_name='eu-central-1')
 sqs = boto3.client('sqs', region_name='eu-central-1')
@@ -55,18 +54,8 @@ async def generate_document(req: AIRequest):
                     usage = event['metadata']['usage']
                     yield f"data: {json.dumps({'type': 'usage', 'content': usage})}\n\n"
                     
-        except NoCredentialsError:
-            error_msg = "AWS credentials not found. Check your .env file."
-            print(f"\n❌ ERROR: {error_msg}\n")
-            yield f"data: {json.dumps({'type': 'text', 'content': error_msg})}\n\n"
-            
-        except ClientError as e:
-            error_msg = e.response['Error']['Message']
-            print(f"\n❌ AWS API ERROR: {error_msg}\n")
-            yield f"data: {json.dumps({'type': 'text', 'content': f'AWS API Error: {error_msg}'})}\n\n"
-            
         except Exception as e:
-            print(f"\n❌ UNEXPECTED ERROR: {str(e)}\n")
+            print(f"\nUNEXPECTED ERROR: {str(e)}\n")
             yield f"data: {json.dumps({'type': 'text', 'content': 'An unexpected backend error occurred.'})}\n\n"
 
     return StreamingResponse(bedrock_stream_generator(), media_type="text/event-stream")
@@ -77,7 +66,6 @@ async def approve_document(req: ApprovalRequest):
         session_id = str(uuid.uuid4())
         timestamp = int(time.time())
 
-        # 1. Save to DynamoDB
         table = dynamodb.Table('SessionHistory')
         table.put_item(
             Item={
@@ -89,14 +77,12 @@ async def approve_document(req: ApprovalRequest):
             }
         )
 
-        # 2. Get the SQS Queue URL dynamically
         queue_url_response = sqs.get_queue_url(QueueName=QUEUE_NAME)
         queue_url = queue_url_response['QueueUrl']
 
-        # 3. Send Message to SQS
         sqs_payload = {
             "sessionId": session_id,
-            "action": "CREATE_TICKETS",
+            "action": "RESPONSE_APPROVED",
             "documentLength": len(req.generated_document)
         }
         

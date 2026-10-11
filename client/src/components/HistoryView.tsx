@@ -87,12 +87,10 @@ export default function HistoryView() {
                         </div>
 
                         <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Prompt</p>
                             <p className="text-sm font-medium text-gray-800">{item.prompt}</p>
                         </div>
 
                         <div>
-                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Output</p>
                             <pre className="mt-1 p-3 bg-gray-50 rounded text-xs font-mono text-gray-700 whitespace-pre-wrap max-h-48 overflow-y-auto border border-gray-100">
                                 <ReactMarkdown>{item.document}</ReactMarkdown>
                             </pre>
