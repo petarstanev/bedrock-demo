@@ -110,3 +110,48 @@ async def approve_document(req: ApprovalRequest):
     except ClientError as e:
         print(f"AWS Error: {e}")
         raise HTTPException(status_code=500, detail="Failed to interact with AWS services")
+
+@app.get("/api/history")
+async def get_session_history():
+    try:
+        table = dynamodb.Table('SessionHistory')
+        response = table.scan()
+        items = response.get('Items', [])
+        
+        # Sort newest first based on the timestamp
+        items.sort(key=lambda x: int(x.get('timestamp', 0)), reverse=True)
+        
+        formatted_items = [
+            {
+                "sessionId": str(item.get("sessionId")),
+                "timestamp": int(item.get("timestamp", 0)),
+                "prompt": item.get("prompt", ""),
+                "document": item.get("document", ""),
+                "status": item.get("status", "APPROVED")
+            }
+            for item in items
+        ]
+        
+        return {"items": formatted_items}
+
+    except ClientError as e:
+        error_msg = e.response['Error'].get('Message', str(e))
+        print(f"DynamoDB Scan Error: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)
+
+@app.delete("/api/history/{session_id}/{timestamp}")
+async def delete_session_record(session_id: str, timestamp: int):
+    try:
+        table = dynamodb.Table('SessionHistory')
+        table.delete_item(
+            Key={
+                'sessionId': session_id,
+                'timestamp': timestamp
+            }
+        )
+        return {"status": "success", "message": f"Deleted session {session_id}"}
+
+    except ClientError as e:
+        error_msg = e.response['Error'].get('Message', str(e))
+        print(f"DynamoDB Delete Error: {error_msg}")
+        raise HTTPException(status_code=500, detail=error_msg)

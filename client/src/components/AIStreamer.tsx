@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 export default function AIStreamer() {
     const [prompt, setPrompt] = useState("Write a 3-bullet technical specification for a Redis cache layer.");
@@ -88,7 +89,7 @@ export default function AIStreamer() {
             </button>
 
             <div className="whitespace-pre-wrap bg-gray-100 text-gray-800 p-4 rounded min-h-[200px] border border-gray-300 shadow-inner">
-                {output || "AI response will stream here..."}
+                <ReactMarkdown>{output || "AI response will stream here..."}</ReactMarkdown>
             </div>
 
             {/* Approval Section */}
